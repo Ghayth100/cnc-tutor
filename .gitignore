@@ -1,0 +1,10 @@
+target/
+.env
+# Fichiers locaux non liés au projet
+/01-PROGRAMMMATION CNC21.pdf
+.github/modernize/
+*.log
+.idea/
+*.iml
+.vscode/
+.DS_Store
