@@ -27,6 +27,11 @@ public class GlobalExceptionHandler {
         return json(HttpStatus.SERVICE_UNAVAILABLE, toError(e));
     }
 
+    @ExceptionHandler(TooManyQuestionsException.class)
+    public ResponseEntity<ErrorResponse> tooMany(TooManyQuestionsException e) {
+        return json(HttpStatus.TOO_MANY_REQUESTS, new ErrorResponse("TOO_MANY_QUESTIONS", e.getMessage()));
+    }
+
     @ExceptionHandler(LlmException.class)
     public ResponseEntity<ErrorResponse> llm(LlmException e) {
         HttpStatus status = switch (e.getKind()) {

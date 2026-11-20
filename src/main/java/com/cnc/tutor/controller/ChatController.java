@@ -19,10 +19,13 @@ import com.cnc.tutor.dto.ChatRequest;
 import com.cnc.tutor.dto.ResetRequest;
 import com.cnc.tutor.exception.ApiKeyMissingException;
 import com.cnc.tutor.exception.GlobalExceptionHandler;
+import com.cnc.tutor.service.ChatRateLimiter;
 import com.cnc.tutor.service.LlmClient;
 import com.cnc.tutor.service.TutorService;
 
 import jakarta.annotation.PreDestroy;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 
 /**
@@ -37,19 +40,26 @@ public class ChatController {
 
     private final TutorService tutorService;
     private final LlmClient llmClient;
+    private final ChatRateLimiter rateLimiter;
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
-    public ChatController(TutorService tutorService, LlmClient llmClient) {
+    public ChatController(TutorService tutorService, LlmClient llmClient, ChatRateLimiter rateLimiter) {
         this.tutorService = tutorService;
         this.llmClient = llmClient;
+        this.rateLimiter = rateLimiter;
     }
 
     @PostMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter chat(@Valid @RequestBody ChatRequest request) {
-        // Vérification synchrone : renvoie une erreur JSON claire via @ControllerAdvice
+    public SseEmitter chat(@Valid @RequestBody ChatRequest request, HttpServletRequest http,
+                           HttpServletResponse response) {
+        // Empêche les proxys (Render, nginx…) de bufferiser le flux SSE
+        response.setHeader("X-Accel-Buffering", "no");
+        response.setHeader("Cache-Control", "no-cache");
+        // Vérifications synchrones : renvoient une erreur JSON claire via @ControllerAdvice
         if (!llmClient.isConfigured()) {
             throw new ApiKeyMissingException();
         }
+        rateLimiter.check(http.getRemoteAddr());
         SseEmitter emitter = new SseEmitter(0L); // pas de timeout côté serveur (géré par LlmClient)
         executor.execute(() -> {
             try {

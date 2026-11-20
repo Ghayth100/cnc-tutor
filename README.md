@@ -47,6 +47,32 @@ Ouvrez ensuite <http://localhost:8080>.
 
 Sans clé, l'application démarre quand même : le chat affiche alors un message expliquant comment définir `LLM_API_KEY`.
 
+## Hébergement public (Render, gratuit)
+
+Le dépôt contient un `Dockerfile` et un `render.yaml`. Render compile l'image depuis GitHub et fournit une adresse HTTPS publique du type `https://cnc-tutor-xxxx.onrender.com`.
+
+1. Créez un compte sur <https://render.com> avec **« Sign in with GitHub »**.
+2. **New +** → **Blueprint** → autorisez l'accès au dépôt `cnc-tutor` → sélectionnez-le.
+3. Render lit `render.yaml` et demande la valeur de **`LLM_API_KEY`** : collez votre clé Groq. Elle reste stockée chez Render, jamais dans le dépôt.
+4. **Apply**. Le premier build prend 5 à 10 minutes, puis l'URL publique s'affiche en haut de la page du service.
+
+Chaque `git push` sur `main` redéploie automatiquement.
+
+Sans Blueprint, la création manuelle fonctionne aussi : **New +** → **Web Service** → le dépôt → Runtime **Docker**, Instance **Free**, variable d'environnement `LLM_API_KEY`.
+
+**Limites de l'offre gratuite**
+- Le service **s'endort après 15 minutes sans visite**. La visite suivante attend environ 1 minute le temps du réveil.
+- Le quota Groq gratuit (environ 8 000 tokens par minute) est **partagé par tous les visiteurs** : environ une question par minute au total. Chaque visiteur est aussi limité à `chat.rate-limit-per-minute=3` questions par minute.
+- Le PDF du cours devient accessible publiquement (pages en image). Vérifiez que vous avez le droit de le diffuser.
+
+**Garde-fous pour un site public** (`application.properties`) : `chat.rate-limit-per-minute` (questions par IP et par minute), `chat.session-ttl` et `chat.max-sessions` (historiques en mémoire bornés).
+
+**Tester l'image localement :**
+```bash
+docker build -t cnc-tutor .
+docker run -p 8080:8080 -e LLM_API_KEY=gsk_... cnc-tutor
+```
+
 ## Tests
 
 ```bash
